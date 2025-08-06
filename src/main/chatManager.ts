@@ -1,5 +1,5 @@
 // chatManager.ts
-import { FileManager, ChatSession, ChatMessage } from './fileManager';
+import { FileManager, ChatSession } from './fileManager';
 import { HChatProvider, Agent, Message } from './hchatAdapter';
 import { MCPManager } from './mcpClient';
 
@@ -90,22 +90,16 @@ export class ChatManager {
       // 마지막 사용자 메시지 추가
       const lastUserMessage = userMessages[userMessages.length - 1];
       if (lastUserMessage && lastUserMessage.role === 'user') {
-        const messageExists = targetChat.messages.some(
-          (msg: ChatMessage) => msg.text === (lastUserMessage.content || lastUserMessage.text) && msg.role === 'user'
-        );
-        
-        if (!messageExists) {
-          this.fileManager.addMessageToChat(targetChat, {
-            idx: Date.now(),
-            text: lastUserMessage.content || lastUserMessage.text,
-            role: 'user'
-          });
-        }
+        this.fileManager.addMessageToChat(targetChat, {
+          idx: Date.now() + Math.random(), // 고유한 ID 생성
+          text: lastUserMessage.content || lastUserMessage.text,
+          role: 'user'
+        });
       }
 
       // 어시스턴트 응답 추가
       this.fileManager.addMessageToChat(targetChat, {
-        idx: Date.now() + 1,
+        idx: Date.now() + Math.random() + 1, // 고유한 ID 생성
         text: assistantResponse,
         role: 'assistant'
       });

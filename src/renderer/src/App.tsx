@@ -9,7 +9,7 @@ function App(): React.JSX.Element {
   const [chats, setChats] = useState<Chat[]>([])
   const [chatLog, setChatLog] = useState<Message[]>([])
   const [activeChatId, setActiveChatId] = useState<string>('')
-  // const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true)
   const [theme, setTheme] = useState<Theme>('system')
   const [actualTheme, setActualTheme] = useState<'light' | 'dark'>('light')
 
@@ -49,7 +49,7 @@ function App(): React.JSX.Element {
 
   // 로컬 스토리지에서 테마 설정 불러오기
   useEffect(() => {
-    const savedTheme = localStorage.getItem('ming-chat-theme') as Theme
+    const savedTheme = localStorage.getItem('update-chat-theme') as Theme
     if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
       setTheme(savedTheme)
     }
@@ -58,7 +58,7 @@ function App(): React.JSX.Element {
   // 테마 변경 핸들러
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme)
-    localStorage.setItem('ming-chat-theme', newTheme)
+    localStorage.setItem('update-chat-theme', newTheme)
   }
 
   // 채팅 로그 가져오기
@@ -137,6 +137,14 @@ function App(): React.JSX.Element {
         }
         
         console.log('✅ 채팅 삭제 성공:', chatId)
+        
+        // 삭제 후 인풋창에 포커스 복원
+        setTimeout(() => {
+          const textarea = document.querySelector('textarea') as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.focus();
+          }
+        }, 100);
       } else {
         console.error('❌ 채팅 삭제 실패:', result.error)
         throw new Error(result.error || '채팅 삭제에 실패했습니다.')
@@ -194,12 +202,20 @@ function App(): React.JSX.Element {
         onRenameChat={handleRenameChatId}
         theme={theme}
         onThemeChange={handleThemeChange}
+        isOpen={isSidebarOpen}
+        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       />
-      <MessageBox 
-        chatLog={chatLog} 
-        setChatLog={handleUpdateChatLog}
-        activeChatId={activeChatId}
-      />
+      <div style={{
+        ...styles.chatContainer,
+        marginLeft: '0',
+        transition: 'margin-left 0.3s ease-in-out',
+      }}>
+        <MessageBox 
+          chatLog={chatLog} 
+          setChatLog={handleUpdateChatLog}
+          activeChatId={activeChatId}
+        />
+      </div>
     </div>
   )
 }
@@ -211,6 +227,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     width: '100vw',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     backgroundColor: 'var(--bg-primary)',
+    overflow: 'hidden',
+  },
+  chatContainer: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    width: '100%',
+    backgroundColor: 'var(--bg-secondary)',
+    borderRadius: '0.5rem',
+    boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)',
     overflow: 'hidden',
   }
 }

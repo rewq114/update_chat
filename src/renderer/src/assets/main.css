@@ -287,8 +287,13 @@ button:hover {
 
 /* 텍스트 선택 스타일 */
 ::selection {
-  background-color: var(--accent-primary);
-  color: white;
+  background-color: rgba(0, 123, 255, 0.4);
+  color: inherit;
+}
+
+::-moz-selection {
+  background-color: rgba(0, 123, 255, 0.4);
+  color: inherit;
 }
 
 /* 코드 블록 스타일 (메시지 내 코드용) */

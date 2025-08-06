@@ -46,45 +46,64 @@ function createWindow(): void {
   }
 }
 
+async function initializeSystem() {
+  try {
+    console.log('🔄 Initializing system services...');
+    const fileManager = new FileManager();
+    const systemConfig = fileManager.readSystemConfig();
+
+    const hchatProvider = new HChatProvider(systemConfig['api-key']);
+
+    // ChatManager 초기화
+    chatManager = new ChatManager(fileManager, hchatProvider, mcpManager || undefined);
+    
+    // ConfigManager 초기화
+    configManager = new ConfigManager(fileManager);
+  } catch (error) {
+    console.error('❌ System initialization failed:', error);
+  }
+  console.log('✅ System initialization completed');
+}
+
+async function initializeMCP() {
+  try {
+    console.log('🔄 Initializing MCP services...');
+    const fileManager = new FileManager();
+    const mcpConfig = fileManager.readMCPConfig();
+
+    mcpManager = new MCPManager();
+    await mcpManager.loadFromConfig(mcpConfig);
+
+    // 사용 가능한 도구 목록 출력
+    const tools = await mcpManager.listAllTools();
+    console.log('🔍 available tools:', tools);
+  } catch (error) {
+    console.error('❌ MCP initialization failed:', error);
+  }
+  console.log('✅ MCP initialization completed');
+}
+
+async function initialize() {
+  await initializeMCP();
+  await initializeSystem();
+}
+
 app.whenReady().then(async () => {
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.update-chat')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // 매니저 클래스들 초기화
-  const fileManager = new FileManager();
-  
-  try {
-    // 설정 파일 읽기
-    const systemConfig = fileManager.readSystemConfig();
-    const mcpConfig = fileManager.readMCPConfig();
+  createWindow()
+  await initialize()
 
-    // HChatProvider 인스턴스 생성
-    const hchatProvider = new HChatProvider(systemConfig['api-key']);
+  app.on('activate', function () {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
+})
 
-    // MCP Manager 초기화
-    console.log('🚀 MCP Manager initializing...')
-    mcpManager = new MCPManager();
-    await mcpManager.loadFromConfig(mcpConfig);
-    console.log('✅ MCP Manager initialized')
-    
-    // 사용 가능한 도구 목록 출력
-    const tools = await mcpManager.listAllTools();
-    console.log('🔍 available tools:', tools);
-
-    // ChatManager 초기화
-    chatManager = new ChatManager(fileManager, hchatProvider, mcpManager);
-    
-    // ConfigManager 초기화
-    configManager = new ConfigManager(fileManager);
-
-  } catch (error) {
-    console.error('❌ Initialization failed:', error);
-  }
-
-  // MCP 도구 목록 조회 핸들러
+// MCP 도구 목록 조회 핸들러
   ipcMain.handle('mcp-list-tools', async () => {
     if (!mcpManager) {
       return { success: false, error: 'MCP Manager is not initialized' }
@@ -174,15 +193,83 @@ app.whenReady().then(async () => {
     if (!configManager) {
       return { success: false, error: 'ConfigManager is not initialized' }
     }
-    return configManager.saveApiKey(apiKey);
+    configManager.saveApiKey(apiKey);
+    await initializeSystem(); // API 키 변경 시 시스템 재초기화
+    return { success: true };
   })
 
-  createWindow()
-
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  // System Prompt 조회 핸들러
+  ipcMain.handle('get-system-prompt', async (_event) => {
+    if (!configManager) {
+      return 'You are a helpful assistant.';
+    }
+    return configManager.getSystemPrompt();
   })
-})
+
+  // System Prompt 저장 핸들러
+  ipcMain.handle('save-system-prompt', async (_event, systemPrompt) => {
+    if (!configManager) {
+      return { success: false, error: 'ConfigManager is not initialized' }
+    }
+    const result = configManager.saveSystemPrompt(systemPrompt);
+    if (result.success) {
+      await initializeSystem(); // System prompt 변경 시 시스템 재초기화
+    }
+    return result;
+  })
+
+  // Theme 조회 핸들러
+  ipcMain.handle('get-theme', async (_event) => {
+    if (!configManager) {
+      return 'system';
+    }
+    return configManager.getTheme();
+  })
+
+  // Theme 저장 핸들러
+  ipcMain.handle('save-theme', async (_event, theme) => {
+    if (!configManager) {
+      return { success: false, error: 'ConfigManager is not initialized' }
+    }
+    const result = configManager.saveTheme(theme);
+    if (result.success) {
+      await initializeSystem(); // Theme 변경 시 시스템 재초기화
+    }
+    return result;
+  })
+
+  // Default Model 조회 핸들러
+  ipcMain.handle('get-default-model', async (_event) => {
+    if (!configManager) {
+      return 'claude-opus-4';
+    }
+    return configManager.getDefaultModel();
+  })
+
+  // Default Model 저장 핸들러
+  ipcMain.handle('save-default-model', async (_event, model) => {
+    if (!configManager) {
+      return { success: false, error: 'ConfigManager is not initialized' }
+    }
+    const result = configManager.saveDefaultModel(model);
+    if (result.success) {
+      await initializeSystem(); // Default model 변경 시 시스템 재초기화
+    }
+    return result;
+  })
+
+  // MCP Config 저장 핸들러
+  ipcMain.handle('save-mcp-config', async (_event, mcpConfig) => {
+    try {
+      const fileManager = new FileManager();
+      fileManager.saveMCPConfig(mcpConfig);
+      await initializeMCP(); // MCP 설정 변경 시 MCP 재초기화
+      return { success: true };
+    } catch (error) {
+      console.error('❌ MCP config save failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  })
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

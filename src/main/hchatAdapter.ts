@@ -75,49 +75,92 @@ export class HChatProvider implements LLMProvider {
   }
 
   private async callOpenAIAPI(model: string, messages: Message[], mcpTools: MCPTool[]) {
-    try {
-      const url = `${this.baseUrl}/openai/deployments/${model}/chat/completions?api-version=2024-10-21`;
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "api-key": this.apiKey,
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: messages.map((msg) => ({
-            role: msg.role,
-            content: msg.content,
-          })),
-          temperature: 0.7,
-          max_tokens: 2000,
-          tools: this.formatToolsForOpenAI(mcpTools)
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `OpenAI API 호출 실패: ${response.status} ${response.statusText} - ${errorText}`
-        );
-      }
-
-      const data: any = await response.json();
-      
-      return {
-        content: data.choices?.[0]?.message?.content || "",
-        usage: data.usage,
-      };
-    } catch (error) {
-      console.error("❌ OpenAI REST API 실패:", error);
-      throw error;
+    const url = `${this.baseUrl}/openai/deployments/${model}/chat/completions?api-version=2024-10-21`;
+    
+    // request body 생성
+    interface RequestBody {
+      model: string;
+      messages: { role: string; content: string }[];
+      temperature: number;
+      max_tokens: number;
+      tools?: { type: string; function: { name: string; description: string; parameters: any } }[];
     }
+
+    const body: RequestBody = {
+      model: model,
+      messages: messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      })),
+      temperature: 0.7,
+      max_tokens: 2000,
+    }
+
+    if (mcpTools.length > 0) {
+      body.tools = mcpTools.map(tool => ({
+        type: 'function',
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.inputSchema
+        }
+      }))
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": this.apiKey,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `${response.status} ${response.statusText} - ${errorText}`
+      );
+    }
+
+    const data: any = await response.json();
+    
+    return {
+      content: data.choices?.[0]?.message?.content || "",
+      usage: data.usage,
+    };
   }
 
   private async callClaudeAPI(model: string, messages: Message[], mcpTools: MCPTool[]) {
     const systemMessage = messages.find((m) => m.role === "system");
     const userMessages = messages.filter((m) => m.role !== "system");
+
+    interface RequestBody {
+      model: string;
+      messages: { role: string; content: string }[];
+      temperature: number;
+      max_tokens: number;
+      system: string;
+      stream: boolean;
+      tools?: { name: string; description: string; parameters: any }[];
+    }
+    
+    const body: RequestBody = {
+      model: model,
+      messages: userMessages,
+      temperature: 0.7,
+      max_tokens: 2000,
+      system: systemMessage?.content || "",
+      stream: false,
+    }
+
+    if (mcpTools.length > 0) {
+      body.tools = mcpTools.map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.inputSchema
+      }))
+    }
 
     const response = await fetch(`${this.baseUrl}/claude/messages`, {
       method: "POST",
@@ -125,20 +168,13 @@ export class HChatProvider implements LLMProvider {
         "Content-Type": "application/json",
         Authorization: this.apiKey,
       },
-      body: JSON.stringify({
-        max_tokens: 2000,
-        model: model,
-        stream: false,
-        system: systemMessage?.content || "",
-        messages: userMessages,
-        tools: this.formatToolsForClaude(mcpTools)
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(
-        `❌ Claude API 호출 실패: ${response.status} ${response.statusText} - ${errorText}`
+        `${response.status} ${response.statusText} - ${errorText}`
       );
     }
 
@@ -159,6 +195,31 @@ export class HChatProvider implements LLMProvider {
       parts: [{ text: msg.content }],
     }));
 
+    interface RequestBody {
+      systemInstruction: { parts: { text: string }[] } | undefined;
+      contents: { role: string; parts: { text: string }[] }[];
+      tools?: { function_declarations: { name: string; description: string; parameters: any }[] }[];
+    }
+    
+    const body: RequestBody = {
+      systemInstruction: systemMessage
+        ? {
+            parts: [{ text: systemMessage.content }],
+          }
+        : undefined,
+      contents: contents,
+    }
+
+    if (mcpTools.length > 0) {
+      body.tools = [{
+        function_declarations: mcpTools.map(tool => ({
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.inputSchema
+        }))
+      }]
+    }
+
     const response = await fetch(
       `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`,
       {
@@ -166,23 +227,14 @@ export class HChatProvider implements LLMProvider {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          systemInstruction: systemMessage
-            ? {
-                parts: [{ text: systemMessage.content }],
-              }
-            : undefined,
-          contents: contents,
-          tools: [{
-            function_declarations: this.formatToolsForGemini(mcpTools)
-          }]
-        }),
+        body: JSON.stringify(body),
       }
     );
 
     if (!response.ok) {
+      const errorText = await response.text();
       throw new Error(
-        `❌ Gemini API 호출 실패: ${response.status} ${response.statusText}`
+        `${response.status} ${response.statusText} - ${errorText}`
       );
     }
 
@@ -192,33 +244,6 @@ export class HChatProvider implements LLMProvider {
       content: data.candidates?.[0]?.content?.parts?.[0]?.text || "",
       usage: data.usageMetadata,
     };
-  }
-
-  private formatToolsForOpenAI(tools: MCPTool[]) {
-    return tools.map(tool => ({
-      type: 'function',
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: tool.inputSchema
-      }
-    }));
-  }
-
-  private formatToolsForClaude(tools: MCPTool[]) {
-    return tools.map(tool => ({
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.inputSchema
-    }));
-  }
-
-  private formatToolsForGemini(tools: MCPTool[]) {
-    return tools.map(tool => ({
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.inputSchema
-    }));
   }
 
   async *stream(agent: Agent, messages: Message[], mcpTools: any): AsyncIterable<string> {

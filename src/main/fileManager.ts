@@ -17,6 +17,9 @@ export interface ChatSession {
 
 export interface SystemConfig {
   'api-key': string;
+  'system-prompt': string;
+  'theme': 'light' | 'dark' | 'system';
+  'default-model': string;
 }
 
 export interface MCPConfig {
@@ -31,7 +34,7 @@ export class FileManager {
 
   constructor() {
     // 사용자 홈 디렉토리에 앱 데이터 폴더 생성
-    this.appDataDir = join(os.homedir(), 'AppData', 'Roaming', 'min-chat');
+    this.appDataDir = join(os.homedir(), 'AppData', 'Roaming', 'update-chat');
     this.ensureAppDataDir();
     
     this.chatLogPath = join(this.appDataDir, 'chat_log.json');
@@ -58,7 +61,10 @@ export class FileManager {
   // 설정 파일 읽기 메서드들
   readSystemConfig(): SystemConfig {
     const defaultConfig: SystemConfig = {
-      'api-key': ''
+      'api-key': '',
+      'system-prompt': 'You are a helpful assistant.',
+      'theme': 'system',
+      'default-model': 'claude-opus-4'
     };
     
     this.ensureFileExists(this.systemConfigPath, defaultConfig);
