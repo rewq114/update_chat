@@ -1,11 +1,14 @@
-// Chat components
-export * from './chat';
-
 // Layout components
-export * from './layout';
+export * from './layout'
 
-// UI components
-export * from './ui';
+// Chat components
+export * from './chat'
 
 // Settings components
-export * from './settings';
+export * from './settings'
+
+// UI components
+export * from './ui'
+
+// Performance monitoring components
+export * from './performance'

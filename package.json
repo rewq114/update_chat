@@ -18,17 +18,29 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux"
+    "build:linux": "electron-vite build && electron-builder --linux",
+    "test": "ts-node src/core/test/run-tests.ts",
+    "test:performance": "ts-node src/core/test/run-tests.ts performance",
+    "test:file-management": "ts-node src/core/test/run-tests.ts file-management",
+    "test:mcp-client": "ts-node src/core/test/run-tests.ts mcp-client",
+    "test:mcp-integration": "ts-node src/core/test/mcp-integration-test.ts",
+    "test:mcp-context7": "ts-node src/core/test/mcp-context7-test.ts",
+    "test:mcp-tool-integration": "ts-node src/core/test/mcp-tool-integration-test.ts",
+    "test:performance-only": "ts-node src/core/test/performance-test.ts",
+    "test:file-management-only": "ts-node src/core/test/file-management-test.ts",
+    "test:mcp-client-only": "ts-node src/core/test/mcp-client-test.ts"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@modelcontextprotocol/sdk": "^1.17.1",
     "@rewq114/h-chat-sdk": "^0.1.0",
+    "@types/ws": "^8.18.1",
     "electron-updater": "^6.3.9",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
@@ -52,6 +64,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwindcss": "^3.4.17",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "vite": "^7.0.5"
   }

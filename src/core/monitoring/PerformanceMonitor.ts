@@ -1,59 +1,62 @@
 // core/monitoring/PerformanceMonitor.ts
-import { Logger } from '../logging/Logger';
+import { Logger } from '../logging/Logger'
 
 export interface PerformanceMetric {
-  operation: string;
-  startTime: number;
-  endTime: number;
-  duration: number;
-  success: boolean;
-  error?: string;
-  metadata?: Record<string, unknown>;
+  operation: string
+  startTime: number
+  endTime: number
+  duration: number
+  success: boolean
+  error?: string
+  metadata?: Record<string, unknown>
 }
 
 export interface PerformanceStats {
-  operation: string;
-  totalCalls: number;
-  successfulCalls: number;
-  failedCalls: number;
-  averageDuration: number;
-  minDuration: number;
-  maxDuration: number;
-  p50Duration: number;
-  p95Duration: number;
-  p99Duration: number;
+  operation: string
+  totalCalls: number
+  successfulCalls: number
+  failedCalls: number
+  averageDuration: number
+  minDuration: number
+  maxDuration: number
+  p50Duration: number
+  p95Duration: number
+  p99Duration: number
 }
 
 export interface SystemMetrics {
   memoryUsage: {
-    rss: number;
-    heapUsed: number;
-    heapTotal: number;
-    external: number;
-  };
-  cpuUsage: number;
-  uptime: number;
-  activeConnections: number;
+    rss: number
+    heapUsed: number
+    heapTotal: number
+    external: number
+  }
+  cpuUsage: {
+    user: number
+    system: number
+  }
+  uptime: number
+  activeConnections: number
 }
 
 export class PerformanceMonitor {
-  private logger: Logger;
-  private metrics: Map<string, PerformanceMetric[]> = new Map();
-  private operationTimers: Map<string, number> = new Map();
-  private systemMetricsInterval?: NodeJS.Timeout;
+  private logger: Logger
+  private metrics: Map<string, PerformanceMetric[]> = new Map()
+  private operationTimers: Map<string, number> = new Map()
+  private systemMetricsInterval?: NodeJS.Timeout
 
   constructor(logger: Logger) {
-    this.logger = logger;
-    this.startSystemMetricsCollection();
+    this.logger = logger
+    this.startSystemMetricsCollection()
   }
 
   /**
    * 작업 시작 시간 기록
    */
   startOperation(operation: string): string {
-    const startTime = Date.now();
-    this.operationTimers.set(operation, startTime);
-    return operation;
+    const startTime = Date.now()
+    this.operationTimers.set(operation, startTime)
+    return operation
   }
 
   /**
@@ -65,14 +68,14 @@ export class PerformanceMonitor {
     error?: string,
     metadata?: Record<string, unknown>
   ): PerformanceMetric | null {
-    const startTime = this.operationTimers.get(operation);
+    const startTime = this.operationTimers.get(operation)
     if (!startTime) {
-      this.logger.warn('PERFORMANCE', `No start time found for operation: ${operation}`);
-      return null;
+      this.logger.warn('PERFORMANCE', `No start time found for operation: ${operation}`)
+      return null
     }
 
-    const endTime = Date.now();
-    const duration = endTime - startTime;
+    const endTime = Date.now()
+    const duration = endTime - startTime
 
     const metric: PerformanceMetric = {
       operation,
@@ -82,21 +85,21 @@ export class PerformanceMonitor {
       success,
       error,
       metadata
-    };
+    }
 
     // 메트릭 저장
     if (!this.metrics.has(operation)) {
-      this.metrics.set(operation, []);
+      this.metrics.set(operation, [])
     }
-    this.metrics.get(operation)!.push(metric);
+    this.metrics.get(operation)!.push(metric)
 
     // 타이머 제거
-    this.operationTimers.delete(operation);
+    this.operationTimers.delete(operation)
 
     // 성능 로그 기록
-    this.logPerformance(metric);
+    this.logMetric(metric)
 
-    return metric;
+    return metric
   }
 
   /**
@@ -107,56 +110,52 @@ export class PerformanceMonitor {
     asyncFn: () => Promise<T>,
     metadata?: Record<string, unknown>
   ): Promise<T> {
-    this.startOperation(operation);
-    
+    this.startOperation(operation)
+
     try {
-      const result = await asyncFn();
-      this.endOperation(operation, true, undefined, metadata);
-      return result;
+      const result = await asyncFn()
+      this.endOperation(operation, true, undefined, metadata)
+      return result
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.endOperation(operation, false, errorMessage, metadata);
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      this.endOperation(operation, false, errorMessage, metadata)
+      throw error
     }
   }
 
   /**
    * 동기 작업 래퍼
    */
-  measureSync<T>(
-    operation: string,
-    syncFn: () => T,
-    metadata?: Record<string, unknown>
-  ): T {
-    this.startOperation(operation);
-    
+  measureSync<T>(operation: string, syncFn: () => T, metadata?: Record<string, unknown>): T {
+    this.startOperation(operation)
+
     try {
-      const result = syncFn();
-      this.endOperation(operation, true, undefined, metadata);
-      return result;
+      const result = syncFn()
+      this.endOperation(operation, true, undefined, metadata)
+      return result
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.endOperation(operation, false, errorMessage, metadata);
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      this.endOperation(operation, false, errorMessage, metadata)
+      throw error
     }
   }
 
   /**
-   * 성능 로그 기록
+   * 성능 메트릭 로깅
    */
-  private logPerformance(metric: PerformanceMetric): void {
-    const logLevel = metric.success ? 'debug' : 'warn';
-    const details = {
+  private logMetric(metric: PerformanceMetric): void {
+    const details: Record<string, unknown> = {
       duration: metric.duration,
       success: metric.success,
-      ...metric.metadata
-    };
-
-    if (metric.error) {
-      details.error = metric.error;
+      timestamp: metric.startTime,
+      metadata: metric.metadata
     }
 
-    this.logger.performance(metric.operation, metric.duration, details);
+    if (metric.error) {
+      details.error = metric.error
+    }
+
+    this.logger.debug('PERFORMANCE', `${metric.operation} took ${metric.duration}ms`, details)
   }
 
   /**
@@ -164,9 +163,16 @@ export class PerformanceMonitor {
    */
   private startSystemMetricsCollection(): void {
     this.systemMetricsInterval = setInterval(() => {
-      const metrics = this.getSystemMetrics();
-      this.logger.debug('SYSTEM_METRICS', 'System metrics collected', metrics);
-    }, 30000); // 30초마다 수집
+      const metrics = this.collectSystemMetrics()
+      this.logger.debug('SYSTEM_METRICS', 'System metrics collected', {
+        uptime: metrics.uptime,
+        memoryUsage: {
+          heapUsedMB: (metrics.memoryUsage.heapUsed / 1024 / 1024).toFixed(2),
+          heapTotalMB: (metrics.memoryUsage.heapTotal / 1024 / 1024).toFixed(2)
+        },
+        activeConnections: metrics.activeConnections
+      })
+    }, 30000) // 30초마다 수집
   }
 
   /**
@@ -174,42 +180,48 @@ export class PerformanceMonitor {
    */
   stopSystemMetricsCollection(): void {
     if (this.systemMetricsInterval) {
-      clearInterval(this.systemMetricsInterval);
-      this.systemMetricsInterval = undefined;
+      clearInterval(this.systemMetricsInterval)
+      this.systemMetricsInterval = undefined
     }
   }
 
   /**
-   * 시스템 메트릭 조회
+   * 시스템 메트릭 수집
    */
-  getSystemMetrics(): SystemMetrics {
-    const memUsage = process.memoryUsage();
-    
-    return {
-      memoryUsage: {
-        rss: memUsage.rss,
-        heapUsed: memUsage.heapUsed,
-        heapTotal: memUsage.heapTotal,
-        external: memUsage.external
-      },
-      cpuUsage: process.cpuUsage().user,
+  private collectSystemMetrics(): SystemMetrics {
+    const usage = process.memoryUsage()
+    const cpuUsage = process.cpuUsage()
+
+    const metrics: SystemMetrics = {
       uptime: process.uptime(),
-      activeConnections: this.operationTimers.size
-    };
+      memoryUsage: {
+        heapUsed: usage.heapUsed,
+        heapTotal: usage.heapTotal,
+        external: usage.external,
+        rss: usage.rss
+      },
+      cpuUsage: {
+        user: cpuUsage.user,
+        system: cpuUsage.system
+      },
+      activeConnections: this.getActiveOperationCount()
+    }
+
+    return metrics
   }
 
   /**
    * 특정 작업의 성능 통계 조회
    */
   getOperationStats(operation: string): PerformanceStats | null {
-    const metrics = this.metrics.get(operation);
+    const metrics = this.metrics.get(operation)
     if (!metrics || metrics.length === 0) {
-      return null;
+      return null
     }
 
-    const durations = metrics.map(m => m.duration).sort((a, b) => a - b);
-    const successfulCalls = metrics.filter(m => m.success).length;
-    const failedCalls = metrics.length - successfulCalls;
+    const durations = metrics.map((m) => m.duration).sort((a, b) => a - b)
+    const successfulCalls = metrics.filter((m) => m.success).length
+    const failedCalls = metrics.length - successfulCalls
 
     return {
       operation,
@@ -222,56 +234,56 @@ export class PerformanceMonitor {
       p50Duration: this.getPercentile(durations, 50),
       p95Duration: this.getPercentile(durations, 95),
       p99Duration: this.getPercentile(durations, 99)
-    };
+    }
   }
 
   /**
    * 모든 작업의 성능 통계 조회
    */
   getAllOperationStats(): Record<string, PerformanceStats> {
-    const stats: Record<string, PerformanceStats> = {};
-    
-    for (const operation of this.metrics.keys()) {
-      const operationStats = this.getOperationStats(operation);
+    const stats: Record<string, PerformanceStats> = {}
+
+    for (const operation of Array.from(this.metrics.keys())) {
+      const operationStats = this.getOperationStats(operation)
       if (operationStats) {
-        stats[operation] = operationStats;
+        stats[operation] = operationStats
       }
     }
 
-    return stats;
+    return stats
   }
 
   /**
    * 백분위수 계산
    */
   private getPercentile(sortedArray: number[], percentile: number): number {
-    const index = Math.ceil((percentile / 100) * sortedArray.length) - 1;
-    return sortedArray[Math.max(0, index)];
+    const index = Math.ceil((percentile / 100) * sortedArray.length) - 1
+    return sortedArray[Math.max(0, index)]
   }
 
   /**
    * 성능 경고 체크
    */
   checkPerformanceWarnings(): void {
-    const stats = this.getAllOperationStats();
-    
+    const stats = this.getAllOperationStats()
+
     for (const [operation, stat] of Object.entries(stats)) {
       // 평균 응답 시간이 5초를 초과하는 경우
       if (stat.averageDuration > 5000) {
         this.logger.warn('PERFORMANCE', `Slow operation detected: ${operation}`, {
           averageDuration: stat.averageDuration,
           totalCalls: stat.totalCalls
-        });
+        })
       }
 
       // 실패율이 10%를 초과하는 경우
-      const failureRate = (stat.failedCalls / stat.totalCalls) * 100;
+      const failureRate = (stat.failedCalls / stat.totalCalls) * 100
       if (failureRate > 10) {
         this.logger.warn('PERFORMANCE', `High failure rate detected: ${operation}`, {
           failureRate: `${failureRate.toFixed(2)}%`,
           failedCalls: stat.failedCalls,
           totalCalls: stat.totalCalls
-        });
+        })
       }
 
       // P95 응답 시간이 10초를 초과하는 경우
@@ -279,7 +291,7 @@ export class PerformanceMonitor {
         this.logger.warn('PERFORMANCE', `High P95 latency detected: ${operation}`, {
           p95Duration: stat.p95Duration,
           totalCalls: stat.totalCalls
-        });
+        })
       }
     }
   }
@@ -288,42 +300,43 @@ export class PerformanceMonitor {
    * 메모리 사용량 경고 체크
    */
   checkMemoryWarnings(): void {
-    const metrics = this.getSystemMetrics();
-    const heapUsedMB = metrics.memoryUsage.heapUsed / 1024 / 1024;
-    const heapTotalMB = metrics.memoryUsage.heapTotal / 1024 / 1024;
-    const memoryUsagePercent = (heapUsedMB / heapTotalMB) * 100;
+    const metrics = this.getSystemMetrics()
+    const heapUsedMB = metrics.memoryUsage.heapUsed / 1024 / 1024
+    const heapTotalMB = metrics.memoryUsage.heapTotal / 1024 / 1024
+    const memoryUsagePercent = (heapUsedMB / heapTotalMB) * 100
 
     if (memoryUsagePercent > 80) {
       this.logger.warn('PERFORMANCE', 'High memory usage detected', {
         heapUsedMB: heapUsedMB.toFixed(2),
         heapTotalMB: heapTotalMB.toFixed(2),
         usagePercent: memoryUsagePercent.toFixed(2)
-      });
+      })
     }
 
     if (memoryUsagePercent > 95) {
-      this.logger.error('PERFORMANCE', 'Critical memory usage detected', {
+      this.logger.error('PERFORMANCE', 'Critical memory usage detected', undefined, {
         heapUsedMB: heapUsedMB.toFixed(2),
         heapTotalMB: heapTotalMB.toFixed(2),
         usagePercent: memoryUsagePercent.toFixed(2)
-      });
+      })
     }
   }
 
   /**
    * 오래된 메트릭 정리
    */
-  cleanupOldMetrics(maxAge: number = 24 * 60 * 60 * 1000): void { // 기본 24시간
-    const cutoff = Date.now() - maxAge;
-    let cleanedCount = 0;
+  cleanupOldMetrics(maxAge: number = 24 * 60 * 60 * 1000): void {
+    // 기본 24시간
+    const cutoff = Date.now() - maxAge
+    let cleanedCount = 0
 
-    for (const [operation, metrics] of this.metrics.entries()) {
-      const filteredMetrics = metrics.filter(m => m.endTime > cutoff);
-      const removedCount = metrics.length - filteredMetrics.length;
-      
+    for (const [operation, metrics] of Array.from(this.metrics.entries())) {
+      const filteredMetrics = metrics.filter((m) => m.startTime > cutoff)
+      const removedCount = metrics.length - filteredMetrics.length
+
       if (removedCount > 0) {
-        this.metrics.set(operation, filteredMetrics);
-        cleanedCount += removedCount;
+        this.metrics.set(operation, filteredMetrics)
+        cleanedCount += removedCount
       }
     }
 
@@ -331,7 +344,7 @@ export class PerformanceMonitor {
       this.logger.info('PERFORMANCE', 'Old metrics cleaned up', {
         cleanedCount,
         remainingMetrics: this.getTotalMetricsCount()
-      });
+      })
     }
   }
 
@@ -339,11 +352,18 @@ export class PerformanceMonitor {
    * 전체 메트릭 수 조회
    */
   getTotalMetricsCount(): number {
-    let total = 0;
-    for (const metrics of this.metrics.values()) {
-      total += metrics.length;
+    let total = 0
+    for (const metrics of Array.from(this.metrics.values())) {
+      total += metrics.length
     }
-    return total;
+    return total
+  }
+
+  /**
+   * 활성 작업 수 조회
+   */
+  private getActiveOperationCount(): number {
+    return this.operationTimers.size
   }
 
   /**
@@ -351,40 +371,40 @@ export class PerformanceMonitor {
    */
   generatePerformanceReport(): {
     summary: {
-      totalOperations: number;
-      totalMetrics: number;
-      averageResponseTime: number;
-      successRate: number;
-    };
-    topSlowOperations: Array<{ operation: string; avgDuration: number }>;
-    topFailedOperations: Array<{ operation: string; failureRate: number }>;
+      totalOperations: number
+      totalMetrics: number
+      averageResponseTime: number
+      successRate: number
+    }
+    topSlowOperations: Array<{ operation: string; avgDuration: number }>
+    topFailedOperations: Array<{ operation: string; failureRate: number }>
     systemHealth: {
-      memoryUsage: number;
-      uptime: number;
-      activeConnections: number;
-    };
+      memoryUsage: number
+      uptime: number
+      activeConnections: number
+    }
   } {
-    const stats = this.getAllOperationStats();
-    const systemMetrics = this.getSystemMetrics();
+    const stats = this.getAllOperationStats()
+    const systemMetrics = this.getSystemMetrics()
 
     // 전체 통계 계산
-    let totalOperations = 0;
-    let totalCalls = 0;
-    let totalSuccessfulCalls = 0;
-    let totalDuration = 0;
+    let totalOperations = 0
+    let totalCalls = 0
+    let totalSuccessfulCalls = 0
+    let totalDuration = 0
 
     for (const stat of Object.values(stats)) {
-      totalOperations++;
-      totalCalls += stat.totalCalls;
-      totalSuccessfulCalls += stat.successfulCalls;
-      totalDuration += stat.averageDuration * stat.totalCalls;
+      totalOperations++
+      totalCalls += stat.totalCalls
+      totalSuccessfulCalls += stat.successfulCalls
+      totalDuration += stat.averageDuration * stat.totalCalls
     }
 
     // 상위 느린 작업들
     const topSlowOperations = Object.entries(stats)
       .map(([operation, stat]) => ({ operation, avgDuration: stat.averageDuration }))
       .sort((a, b) => b.avgDuration - a.avgDuration)
-      .slice(0, 5);
+      .slice(0, 5)
 
     // 상위 실패 작업들
     const topFailedOperations = Object.entries(stats)
@@ -392,9 +412,9 @@ export class PerformanceMonitor {
         operation,
         failureRate: (stat.failedCalls / stat.totalCalls) * 100
       }))
-      .filter(item => item.failureRate > 0)
+      .filter((item) => item.failureRate > 0)
       .sort((a, b) => b.failureRate - a.failureRate)
-      .slice(0, 5);
+      .slice(0, 5)
 
     return {
       summary: {
@@ -406,19 +426,27 @@ export class PerformanceMonitor {
       topSlowOperations,
       topFailedOperations,
       systemHealth: {
-        memoryUsage: (systemMetrics.memoryUsage.heapUsed / systemMetrics.memoryUsage.heapTotal) * 100,
+        memoryUsage:
+          (systemMetrics.memoryUsage.heapUsed / systemMetrics.memoryUsage.heapTotal) * 100,
         uptime: systemMetrics.uptime,
         activeConnections: systemMetrics.activeConnections
       }
-    };
+    }
   }
 
   /**
    * 성능 모니터링 리소스 정리
    */
   dispose(): void {
-    this.stopSystemMetricsCollection();
-    this.metrics.clear();
-    this.operationTimers.clear();
+    this.stopSystemMetricsCollection()
+    this.metrics.clear()
+    this.operationTimers.clear()
+  }
+
+  /**
+   * 시스템 메트릭 조회
+   */
+  getSystemMetrics(): SystemMetrics {
+    return this.collectSystemMetrics()
   }
 }
