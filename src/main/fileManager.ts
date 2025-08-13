@@ -1,188 +1,209 @@
 // fileManager.ts
-import fs from 'fs';
-import { join } from 'path';
-import os from 'os';
-
-export interface ChatMessage {
-  idx: number;
-  text: string;
-  role: 'user' | 'assistant';
-}
-
-export interface ChatSession {
-  id: string;
-  name: string;
-  messages: ChatMessage[];
-}
-
-export interface SystemConfig {
-  'api-key': string;
-  'system-prompt': string;
-  'theme': 'light' | 'dark' | 'system';
-  'default-model': string;
-}
-
-export interface MCPConfig {
-  mcpServers: Record<string, any>;
-}
+import { app } from 'electron';
+import * as fs from 'fs';
+import * as path from 'path';
+import { ChatSession, ChatData } from '../types/api';
+import { MigrationManager } from './migrationManager';
 
 export class FileManager {
-  private chatLogPath: string;
-  private systemConfigPath: string;
-  private mcpConfigPath: string;
   private appDataDir: string;
+  private sessionsFile: string;
+  private chatsDir: string;
+  private migrationManager: MigrationManager;
 
   constructor() {
-    // 사용자 홈 디렉토리에 앱 데이터 폴더 생성
-    this.appDataDir = join(os.homedir(), 'AppData', 'Roaming', 'update-chat');
-    this.ensureAppDataDir();
+    this.appDataDir = path.join(app.getPath('userData'), 'data');
+    this.sessionsFile = path.join(this.appDataDir, 'chat-sessions.json');
+    this.chatsDir = path.join(this.appDataDir, 'chats');
+    this.migrationManager = new MigrationManager(this.appDataDir);
     
-    this.chatLogPath = join(this.appDataDir, 'chat_log.json');
-    this.systemConfigPath = join(this.appDataDir, 'systemConfig.json');
-    this.mcpConfigPath = join(this.appDataDir, 'mcpConfig.json');
+    this.ensureDirectories();
+    this.runMigrationIfNeeded();
   }
 
-  // 앱 데이터 디렉토리 생성
-  private ensureAppDataDir(): void {
+  private ensureDirectories(): void {
     if (!fs.existsSync(this.appDataDir)) {
-      console.log(`Creating app data directory: ${this.appDataDir}`);
       fs.mkdirSync(this.appDataDir, { recursive: true });
     }
-  }
-
-  // 파일이 존재하는지 확인하고 없으면 생성
-  private ensureFileExists(filePath: string, defaultContent: any): void {
-    if (!fs.existsSync(filePath)) {
-      console.log(`Creating file: ${filePath}`);
-      fs.writeFileSync(filePath, JSON.stringify(defaultContent, null, 2));
+    if (!fs.existsSync(this.chatsDir)) {
+      fs.mkdirSync(this.chatsDir, { recursive: true });
     }
   }
 
-  // 설정 파일 읽기 메서드들
-  readSystemConfig(): SystemConfig {
-    const defaultConfig: SystemConfig = {
-      'api-key': '',
-      'system-prompt': 'You are a helpful assistant.',
-      'theme': 'system',
-      'default-model': 'claude-opus-4'
-    };
-    
-    this.ensureFileExists(this.systemConfigPath, defaultConfig);
-    
+  /**
+   * 필요시 마이그레이션 실행
+   */
+  private async runMigrationIfNeeded(): Promise<void> {
     try {
-      const content = fs.readFileSync(this.systemConfigPath, 'utf8');
-      return JSON.parse(content);
-    } catch (error) {
-      console.error('❌ System config read failed:', error);
-      // 파일이 손상된 경우 기본값으로 재생성
-      this.saveSystemConfig(defaultConfig);
-      return defaultConfig;
-    }
-  }
-
-  readMCPConfig(): MCPConfig {
-    const defaultConfig: MCPConfig = {
-      mcpServers: {
-
+      const status = this.migrationManager.getMigrationStatus();
+      
+      if (status.needsMigration) {
+        console.log(`🔄 Migration needed: ${status.legacyFileCount} chats found`);
+        console.log('📊 Migration status:', status);
+        
+        const result = await this.migrationManager.migrate();
+        
+        if (result.success) {
+          console.log(`✅ Migration successful: ${result.migratedCount} chats migrated`);
+        } else {
+          console.error('❌ Migration failed:', result.error);
+        }
+      } else {
+        console.log('ℹ️ No migration needed');
       }
-    };
-    
-    this.ensureFileExists(this.mcpConfigPath, defaultConfig);
-    
-    try {
-      const content = fs.readFileSync(this.mcpConfigPath, 'utf8');
-      return JSON.parse(content);
     } catch (error) {
-      console.error('❌ MCP config read failed:', error);
-      // 파일이 손상된 경우 기본값으로 재생성
-      this.saveMCPConfig(defaultConfig);
-      return defaultConfig;
+      console.error('❌ Migration check failed:', error);
     }
   }
 
-  readChatLog(): ChatSession[] {
-    const defaultChats = this.getDefaultChatSession();
-    
-    this.ensureFileExists(this.chatLogPath, defaultChats);
-    
+  // ============================================================================
+  // 채팅 세션 관리
+  // ============================================================================
+
+  readChatSessions(): ChatSession[] {
     try {
-      const content = fs.readFileSync(this.chatLogPath, 'utf8');
-      return JSON.parse(content);
-    } catch (error) {
-      console.error('❌ Chat log read failed:', error);
-      // 파일이 손상된 경우 기본값으로 재생성
-      this.saveChatLog(defaultChats);
-      return defaultChats;
-    }
-  }
-
-  // 채팅 로그 관련 메서드들
-  saveChatLog(chatLogs: ChatSession[]): void {
-    try {
-      fs.writeFileSync(this.chatLogPath, JSON.stringify(chatLogs, null, 2));
-      console.log('💾 Chat log saved');
-    } catch (error) {
-      console.error('❌ Chat log save failed:', error);
-      throw new Error('Failed to save chat log.');
-    }
-  }
-
-  saveSystemConfig(config: SystemConfig): void {
-    try {
-      fs.writeFileSync(this.systemConfigPath, JSON.stringify(config, null, 2));
-      console.log('💾 System config saved');
-    } catch (error) {
-      console.error('❌ System config save failed:', error);
-      throw new Error('Failed to save system config.');
-    }
-  }
-
-  saveMCPConfig(config: MCPConfig): void {
-    try {
-      fs.writeFileSync(this.mcpConfigPath, JSON.stringify(config, null, 2));
-      console.log('💾 MCP config saved');
-    } catch (error) {
-      console.error('❌ MCP config save failed:', error);
-      throw new Error('Failed to save MCP config.');
-    }
-  }
-
-  // 채팅 세션 관리 메서드들
-  findChatSession(chatLogs: ChatSession[], chatId: string): ChatSession | undefined {
-    return chatLogs.find(chat => chat.id === chatId);
-  }
-
-  createNewChatSession(chatLogs: ChatSession[], chatId: string): ChatSession {
-    return {
-      id: chatId,
-      name: `Chat ${chatLogs.length + 1}`,
-      messages: []
-    };
-  }
-
-  addMessageToChat(chat: ChatSession, message: ChatMessage): void {
-    chat.messages.push(message);
-  }
-
-  // 기본 채팅 세션 생성
-  getDefaultChatSession(): ChatSession[] {
-    return [
-      {
-        id: "demo-chat",
-        name: "Welcome Chat",
-        messages: [
-          {
-            idx: Date.now(),
-            text: "Welcome to Update-Chat! Please enter a message.",
-            role: "assistant"
-          }
-        ]
+      if (!fs.existsSync(this.sessionsFile)) {
+        return [];
       }
-    ];
+      const data = fs.readFileSync(this.sessionsFile, 'utf8');
+      return JSON.parse(data);
+    } catch (error) {
+      console.error('❌ Chat sessions read failed:', error);
+      return [];
+    }
   }
 
-  // 앱 데이터 디렉토리 경로 반환 (디버깅용)
+  saveChatSessions(sessions: ChatSession[]): void {
+    try {
+      fs.writeFileSync(this.sessionsFile, JSON.stringify(sessions, null, 2));
+    } catch (error) {
+      console.error('❌ Chat sessions save failed:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // 채팅 데이터 관리
+  // ============================================================================
+
+  readChatData(sessionId: string): ChatData | null {
+    try {
+      const chatFile = path.join(this.chatsDir, `${sessionId}.json`);
+      if (!fs.existsSync(chatFile)) {
+        return null;
+      }
+      const data = fs.readFileSync(chatFile, 'utf8');
+      return JSON.parse(data);
+    } catch (error) {
+      console.error(`❌ Chat data read failed for session ${sessionId}:`, error);
+      return null;
+    }
+  }
+
+  saveChatData(chatData: ChatData): void {
+    try {
+      const chatFile = path.join(this.chatsDir, `${chatData.sessionId}.json`);
+      fs.writeFileSync(chatFile, JSON.stringify(chatData, null, 2));
+    } catch (error) {
+      console.error(`❌ Chat data save failed for session ${chatData.sessionId}:`, error);
+      throw error;
+    }
+  }
+
+  deleteChatData(sessionId: string): void {
+    try {
+      const chatFile = path.join(this.chatsDir, `${sessionId}.json`);
+      if (fs.existsSync(chatFile)) {
+        fs.unlinkSync(chatFile);
+      }
+    } catch (error) {
+      console.error(`❌ Chat data delete failed for session ${sessionId}:`, error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // 세션 관리 메서드
+  // ============================================================================
+
+  deleteChatSession(sessionId: string): void {
+    try {
+      // 세션 목록에서 제거
+      const sessions = this.readChatSessions();
+      const updatedSessions = sessions.filter(session => session.id !== sessionId);
+      this.saveChatSessions(updatedSessions);
+
+      // 채팅 데이터 파일 삭제
+      this.deleteChatData(sessionId);
+    } catch (error) {
+      console.error(`❌ Chat session delete failed for ${sessionId}:`, error);
+      throw error;
+    }
+  }
+
+  renameChatSession(sessionId: string, newTitle: string): void {
+    try {
+      const sessions = this.readChatSessions();
+      const sessionIndex = sessions.findIndex(session => session.id === sessionId);
+      
+      if (sessionIndex !== -1) {
+        sessions[sessionIndex].title = newTitle;
+        sessions[sessionIndex].updatedAt = Date.now();
+        this.saveChatSessions(sessions);
+      }
+    } catch (error) {
+      console.error(`❌ Chat session rename failed for ${sessionId}:`, error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // 설정 파일 관리 (기존 유지)
+  // ============================================================================
+
+  readConfig(): Record<string, unknown> {
+    try {
+      const configFile = path.join(this.appDataDir, 'config.json');
+      console.log('📁 Looking for config file at:', configFile);
+      
+      if (!fs.existsSync(configFile)) {
+        console.log('❌ Config file not found, returning empty config');
+        return {};
+      }
+      
+      const data = fs.readFileSync(configFile, 'utf8');
+      const config = JSON.parse(data);
+      console.log('✅ Config loaded successfully:', config);
+      return config;
+    } catch (error) {
+      console.error('❌ Config read failed:', error);
+      return {};
+    }
+  }
+
+  saveConfig(config: Record<string, unknown>): void {
+    try {
+      const configFile = path.join(this.appDataDir, 'config.json');
+      fs.writeFileSync(configFile, JSON.stringify(config, null, 2));
+    } catch (error) {
+      console.error('❌ Config save failed:', error);
+      throw error;
+    }
+  }
+
   getAppDataDir(): string {
     return this.appDataDir;
+  }
+
+  // ============================================================================
+  // 마이그레이션 관련 메서드
+  // ============================================================================
+
+  getMigrationStatus() {
+    return this.migrationManager.getMigrationStatus();
+  }
+
+  async runMigration() {
+    return await this.migrationManager.migrate();
   }
 } 

@@ -10,108 +10,92 @@ export class ConfigManager {
 
   getApiKey(): string | null {
     try {
-      const systemConfig = this.fileManager.readSystemConfig();
-      return systemConfig['api-key'];
+      const config = this.fileManager.readConfig();
+      console.log('🔍 Config loaded for API key:', config);
+      const apiKey = (config['api-key'] as string) || null;
+      console.log('🔑 API key found:', apiKey ? 'Yes' : 'No');
+      return apiKey;
     } catch (error) {
-      console.error('❌ API 키 읽기 실패:', error);
+      console.error('❌ API key retrieval failed:', error);
       return null;
     }
   }
 
-  saveApiKey(apiKey: string): { success: boolean; error?: string } {
+  saveApiKey(apiKey: string): void {
     try {
-      const systemConfig = this.fileManager.readSystemConfig();
-      systemConfig['api-key'] = apiKey;
-      
-      this.fileManager.saveSystemConfig(systemConfig);
-      return { success: true };
+      const config = this.fileManager.readConfig();
+      config['api-key'] = apiKey;
+      this.fileManager.saveConfig(config);
+      console.log('💾 API key saved');
     } catch (error) {
-      console.error('❌ API 키 저장 실패:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : String(error) 
-      };
+      console.error('❌ API key save failed:', error);
+      throw new Error('Failed to save API key.');
     }
   }
 
-  // System Prompt 관리
   getSystemPrompt(): string {
     try {
-      const systemConfig = this.fileManager.readSystemConfig();
-      return systemConfig['system-prompt'];
+      const config = this.fileManager.readConfig();
+      return (config['system-prompt'] as string) || 'You are a helpful assistant.';
     } catch (error) {
-      console.error('❌ System prompt 읽기 실패:', error);
+      console.error('❌ System prompt retrieval failed:', error);
       return 'You are a helpful assistant.';
     }
   }
 
-  saveSystemPrompt(systemPrompt: string): { success: boolean; error?: string } {
+  saveSystemPrompt(systemPrompt: string): void {
     try {
-      const systemConfig = this.fileManager.readSystemConfig();
-      systemConfig['system-prompt'] = systemPrompt;
-      
-      this.fileManager.saveSystemConfig(systemConfig);
-      return { success: true };
+      const config = this.fileManager.readConfig();
+      config['system-prompt'] = systemPrompt;
+      this.fileManager.saveConfig(config);
+      console.log('💾 System prompt saved');
     } catch (error) {
-      console.error('❌ System prompt 저장 실패:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : String(error) 
-      };
+      console.error('❌ System prompt save failed:', error);
+      throw new Error('Failed to save system prompt.');
     }
   }
 
-  // Theme 관리
   getTheme(): 'light' | 'dark' | 'system' {
     try {
-      const systemConfig = this.fileManager.readSystemConfig();
-      return systemConfig['theme'];
+      const config = this.fileManager.readConfig();
+      return (config['theme'] as 'light' | 'dark' | 'system') || 'system';
     } catch (error) {
-      console.error('❌ Theme 읽기 실패:', error);
+      console.error('❌ Theme retrieval failed:', error);
       return 'system';
     }
   }
 
-  saveTheme(theme: 'light' | 'dark' | 'system'): { success: boolean; error?: string } {
+  saveTheme(theme: 'light' | 'dark' | 'system'): void {
     try {
-      const systemConfig = this.fileManager.readSystemConfig();
-      systemConfig['theme'] = theme;
-      
-      this.fileManager.saveSystemConfig(systemConfig);
-      return { success: true };
+      const config = this.fileManager.readConfig();
+      config['theme'] = theme;
+      this.fileManager.saveConfig(config);
+      console.log('💾 Theme saved');
     } catch (error) {
-      console.error('❌ Theme 저장 실패:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : String(error) 
-      };
+      console.error('❌ Theme save failed:', error);
+      throw new Error('Failed to save theme.');
     }
   }
 
-  // Default Model 관리
   getDefaultModel(): string {
     try {
-      const systemConfig = this.fileManager.readSystemConfig();
-      return systemConfig['default-model'];
+      const config = this.fileManager.readConfig();
+      return (config['default-model'] as string) || 'claude-opus-4';
     } catch (error) {
-      console.error('❌ Default model 읽기 실패:', error);
+      console.error('❌ Default model retrieval failed:', error);
       return 'claude-opus-4';
     }
   }
 
-  saveDefaultModel(model: string): { success: boolean; error?: string } {
+  saveDefaultModel(model: string): void {
     try {
-      const systemConfig = this.fileManager.readSystemConfig();
-      systemConfig['default-model'] = model;
-      
-      this.fileManager.saveSystemConfig(systemConfig);
-      return { success: true };
+      const config = this.fileManager.readConfig();
+      config['default-model'] = model;
+      this.fileManager.saveConfig(config);
+      console.log('💾 Default model saved');
     } catch (error) {
-      console.error('❌ Default model 저장 실패:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : String(error) 
-      };
+      console.error('❌ Default model save failed:', error);
+      throw new Error('Failed to save default model.');
     }
   }
 } 

@@ -1,23 +1,19 @@
 // chatManager.ts
-import { FileManager, ChatSession } from './fileManager';
-import { HChatProvider, Agent, Message } from './hchatAdapter';
+import { FileManager } from './fileManager';
+import { HChatProvider, Agent } from './hchatAdapter';
 import { MCPManager } from './mcpClient';
+import { 
+  ChatManagerInterface, 
+  LLMRequestData, 
+  LLMResponse, 
+  StreamingCallback, 
+  ChatSession, 
+  ChatData,
+  ChatOperation,
+  ChatMessage
+} from '../types/api';
 
-export interface ChatRequest {
-  chatId?: string;
-  messages: any[];
-  system?: string;
-  model: string;
-  enableMCP?: boolean;
-}
-
-export interface ChatResponse {
-  content: string;
-  success: boolean;
-  error?: string;
-}
-
-export class ChatManager {
+export class ChatManager implements ChatManagerInterface {
   private fileManager: FileManager;
   private hchatProvider: HChatProvider;
   private mcpManager: MCPManager | null = null;
@@ -28,29 +24,40 @@ export class ChatManager {
     this.mcpManager = mcpManager || null;
   }
 
-  async processChatRequest(request: ChatRequest): Promise<ChatResponse> {
+  async processChatRequest(request: LLMRequestData): Promise<LLMResponse> {
     try {
       // Agent 생성
       const agent: Agent = {
         name: 'default-agent',
-        description: request.system || 'You are a helpful assistant.',
-        preferredModel: request.model
+        description: 'You are a helpful assistant.',
+        preferredModel: request.model || 'claude-opus-4'
       };
 
-      // 메시지 형식 변환
-      const messages: Message[] = this.normalizeMessages(request.messages);
+      // 메시지 형식 변환 (SDK 형식에 맞게)
+      const messages: ChatMessage[] = this.normalizeMessages(request.messages);
 
       // MCP 도구 가져오기
-      let tools: any = [];
-      if (this.mcpManager && request.enableMCP) {
-        tools = await this.mcpManager.listAllTools();
+      let tools: Record<string, unknown> = {};
+      if (this.mcpManager && request.tools && request.tools.length > 0) {
+        // 선택된 서버들의 도구들을 가져와서 Record로 변환
+        const allToolsByServer = await this.mcpManager.listAllTools();
+        const selectedTools: unknown[] = [];
+        
+        // 선택된 서버들의 도구들을 수집
+        request.tools.forEach(serverName => {
+          if (allToolsByServer[serverName]) {
+            selectedTools.push(...allToolsByServer[serverName]);
+          }
+        });
+        
+        tools = selectedTools.reduce((acc: Record<string, unknown>, tool) => {
+          acc[(tool as { name: string }).name] = tool;
+          return acc;
+        }, {} as Record<string, unknown>);
       }
 
       // LLM 호출
       const response = await this.hchatProvider.chat(agent, messages, tools);
-
-      // 채팅 로그 업데이트
-      await this.updateChatLog(request.chatId || 'default-chat', request.messages, response.content);
 
       return {
         content: response.content,
@@ -66,113 +73,146 @@ export class ChatManager {
     }
   }
 
-  private normalizeMessages(messages: any[]): Message[] {
-    return messages
-      .filter((msg: any) => msg && (msg.content || msg.text))
-      .map((msg: any) => ({
-        role: msg.role || 'user',
-        content: String(msg.content || msg.text || '')
-      }));
-  }
-
-  private async updateChatLog(chatId: string, userMessages: any[], assistantResponse: string): Promise<void> {
+  async processStreamingRequest(request: LLMRequestData, callback: StreamingCallback): Promise<void> {
     try {
-      let chatLogs = this.fileManager.readChatLog();
+      // Agent 생성
+      const agent: Agent = {
+        name: 'default-agent',
+        description: 'You are a helpful assistant.',
+        preferredModel: request.model || 'claude-opus-4'
+      };
 
-      // 채팅 세션 찾기 또는 생성
-      let targetChat = this.fileManager.findChatSession(chatLogs, chatId);
-      
-      if (!targetChat) {
-        targetChat = this.fileManager.createNewChatSession(chatLogs, chatId);
-        chatLogs.push(targetChat);
-      }
+      // 메시지 형식 변환 (SDK 형식에 맞게)
+      const messages: ChatMessage[] = this.normalizeMessages(request.messages);
 
-      // 마지막 사용자 메시지 추가
-      const lastUserMessage = userMessages[userMessages.length - 1];
-      if (lastUserMessage && lastUserMessage.role === 'user') {
-        this.fileManager.addMessageToChat(targetChat, {
-          idx: Date.now() + Math.random(), // 고유한 ID 생성
-          text: lastUserMessage.content || lastUserMessage.text,
-          role: 'user'
+      // MCP 도구 가져오기
+      let tools: Record<string, unknown> = {};
+      if (this.mcpManager && request.tools && request.tools.length > 0) {
+        // 선택된 서버들의 도구들을 가져와서 Record로 변환
+        const allToolsByServer = await this.mcpManager.listAllTools();
+        const selectedTools: unknown[] = [];
+        
+        // 선택된 서버들의 도구들을 수집
+        request.tools.forEach(serverName => {
+          if (allToolsByServer[serverName]) {
+            selectedTools.push(...allToolsByServer[serverName]);
+          }
         });
+        
+        tools = selectedTools.reduce((acc: Record<string, unknown>, tool) => {
+          acc[(tool as { name: string }).name] = tool;
+          return acc;
+        }, {} as Record<string, unknown>);
       }
 
-      // 어시스턴트 응답 추가
-      this.fileManager.addMessageToChat(targetChat, {
-        idx: Date.now() + Math.random() + 1, // 고유한 ID 생성
-        text: assistantResponse,
-        role: 'assistant'
+      // 스트리밍 응답 시작
+      const stream = this.hchatProvider.stream(agent, messages, tools);
+      
+      let fullResponse = '';
+      for await (const chunk of stream) {
+        fullResponse += chunk;
+        callback.onChunk(chunk, fullResponse);
+      }
+
+      callback.onComplete(fullResponse);
+    } catch (error) {
+      console.error('❌ Streaming request processing failed:', error);
+      callback.onError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  private normalizeMessages(messages: unknown[]): ChatMessage[] {
+    return messages
+      .filter((msg: unknown) => msg && typeof msg === 'object' && ('content' in msg || 'text' in msg))
+      .map((msg: unknown) => {
+        const messageObj = msg as { role?: string; content?: string; text?: string; time?: number };
+        return {
+          role: this.normalizeRole(messageObj.role || 'user'),
+          time: messageObj.time || Date.now(),
+          type: 'text' as const,
+          content: String(messageObj.content || messageObj.text || '')
+        };
       });
+  }
 
-      // 파일에 저장
-      this.fileManager.saveChatLog(chatLogs);
-      console.log(`💾 Chat log updated: ${chatId}`);
-      
-    } catch (error) {
-      console.error('❌ Chat log update failed:', error);
-      throw error;
+  private normalizeRole(role: string): 'system' | 'user' | 'assistant' {
+    switch (role.toLowerCase()) {
+      case 'system':
+        return 'system';
+      case 'assistant':
+        return 'assistant';
+      case 'user':
+      default:
+        return 'user';
     }
   }
 
-  // 채팅 로그 조회
-  getChatLog(): ChatSession[] {
-    try {
-      return this.fileManager.readChatLog();
-    } catch (error) {
-      console.error('❌ Chat log read failed:', error);
-      return this.fileManager.getDefaultChatSession();
-    }
+  // ============================================================================
+  // 채팅 세션 관리
+  // ============================================================================
+
+  getChatSessions(): ChatSession[] {
+    return this.fileManager.readChatSessions();
   }
 
-  // 채팅 삭제
-  deleteChat(chatId: string): { success: boolean; chats?: ChatSession[]; error?: string } {
-    try {
-      let chatLogs = this.fileManager.readChatLog();
-      const filteredChats = chatLogs.filter(chat => chat.id !== chatId);
-      
-      this.fileManager.saveChatLog(filteredChats);
-      console.log(`🗑️ Chat deleted: ${chatId}`);
-      
-      return { success: true, chats: filteredChats };
-    } catch (error) {
-      console.error('❌ Chat delete failed:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : String(error) 
-      };
-    }
+  getChatData(sessionId: string): ChatData | null {
+    return this.fileManager.readChatData(sessionId);
   }
 
-  // 채팅 이름 변경
-  renameChat(chatId: string, newName: string): { success: boolean; chats?: ChatSession[]; error?: string } {
+  saveChatSession(session: ChatSession): ChatOperation {
     try {
-      let chatLogs = this.fileManager.readChatLog();
-      const updatedChats = chatLogs.map(chat => 
-        chat.id === chatId 
-          ? { ...chat, name: newName.trim() }
-          : chat
-      );
+      const sessions = this.fileManager.readChatSessions();
+      const existingIndex = sessions.findIndex(s => s.id === session.id);
       
-      this.fileManager.saveChatLog(updatedChats);
-      console.log(`✏️ Chat name changed: ${chatId} -> ${newName}`);
+      if (existingIndex !== -1) {
+        sessions[existingIndex] = session;
+      } else {
+        sessions.push(session);
+      }
       
-      return { success: true, chats: updatedChats };
-    } catch (error) {
-      console.error('❌ Chat name change failed:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : String(error) 
-      };
-    }
-  }
-
-  // 채팅 목록 저장
-  saveChatList(chatList: ChatSession[]): { success: boolean; error?: string } {
-    try {
-      this.fileManager.saveChatLog(chatList);
+      this.fileManager.saveChatSessions(sessions);
       return { success: true };
     } catch (error) {
-      console.error('❌ Chat list save failed:', error);
+      console.error('❌ Chat session save failed:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : String(error) 
+      };
+    }
+  }
+
+  saveChatData(chatData: ChatData): ChatOperation {
+    try {
+      this.fileManager.saveChatData(chatData);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Chat data save failed:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : String(error) 
+      };
+    }
+  }
+
+  deleteChatSession(sessionId: string): ChatOperation {
+    try {
+      this.fileManager.deleteChatSession(sessionId);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Chat session deletion failed:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : String(error) 
+      };
+    }
+  }
+
+  renameChatSession(sessionId: string, newTitle: string): ChatOperation {
+    try {
+      this.fileManager.renameChatSession(sessionId, newTitle);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Chat session rename failed:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : String(error) 

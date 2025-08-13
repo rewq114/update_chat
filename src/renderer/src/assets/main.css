@@ -1,4 +1,7 @@
 @import './base.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* 테마 CSS 변수 */
 :root {
@@ -73,197 +76,194 @@ body {
   padding: 0;
 }
 
-/* 컨텍스트 메뉴 스타일 개선 */
-.context-menu-item:hover {
-  background-color: var(--bg-hover) !important;
+/* Markdown 스타일 */
+.markdown-content {
+  line-height: 1.6;
 }
 
-.context-menu-item-danger:hover {
-  background-color: var(--bg-danger-hover) !important;
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin: 16px 0 8px 0;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
-/* 채팅 아이템 호버 효과 */
-.chat-item:hover {
-  background-color: var(--bg-hover) !important;
+.markdown-content h1 {
+  font-size: 1.5em;
+  border-bottom: 1px solid var(--border-primary);
+  padding-bottom: 8px;
 }
 
-.chat-item.active:hover {
-  background-color: var(--bg-active) !important;
+.markdown-content h2 {
+  font-size: 1.3em;
+  border-bottom: 1px solid var(--border-primary);
+  padding-bottom: 6px;
 }
 
-/* 인라인 편집 input 스타일 */
-input:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+.markdown-content h3 {
+  font-size: 1.1em;
 }
 
-/* 모델 선택 드롭다운 개선 */
-select {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border-color: var(--border-primary);
+.markdown-content p {
+  margin: 8px 0;
 }
 
-select:hover {
-  border-color: var(--accent-primary) !important;
+.markdown-content ul,
+.markdown-content ol {
+  margin: 8px 0;
+  padding-left: 24px;
 }
 
-select:focus {
-  outline: none;
-  border-color: var(--accent-primary) !important;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25) !important;
+.markdown-content li {
+  margin: 4px 0;
 }
 
-select:disabled {
-  background-color: var(--bg-tertiary) !important;
-  cursor: not-allowed !important;
-  opacity: 0.6 !important;
+.markdown-content blockquote {
+  border-left: 4px solid var(--accent-primary);
+  margin: 12px 0;
+  padding: 8px 16px;
+  background-color: var(--bg-tertiary);
+  border-radius: 4px;
+  font-style: italic;
 }
 
-/* 새 채팅 버튼 호버 효과 개선 */
-button:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+.markdown-content pre {
+  background-color: var(--bg-tertiary);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 12px 0;
+  overflow: auto;
+  font-size: 14px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  border: 1px solid var(--border-primary);
 }
 
-/* 애니메이션 키프레임 */
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  color: inherit;
 }
 
-@keyframes bounce {
-  0%, 80%, 100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-10px);
-  }
+.markdown-content code {
+  background-color: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  border: 1px solid var(--border-primary);
 }
 
-/* 타이핑 애니메이션 - 각 점이 다른 타이밍으로 시작 */
-@keyframes bounce {
-  0%, 80%, 100% {
-    transform: translateY(0);
-    opacity: 0.5;
-  }
-  40% {
-    transform: translateY(-8px);
-    opacity: 1;
-  }
+.markdown-content a {
+  color: var(--accent-primary);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-bottom-color 0.2s ease;
 }
 
-/* 페이드 인 애니메이션 */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.markdown-content a:hover {
+  border-bottom-color: var(--accent-primary);
 }
 
-/* 모달 슬라이드 인 애니메이션 */
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  font-size: 14px;
 }
 
-/* 컨텍스트 메뉴 진입/퇴장 애니메이션 */
-@keyframes contextMenuShow {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid var(--border-primary);
+  padding: 8px 12px;
+  text-align: left;
 }
 
-.context-menu {
-  animation: contextMenuShow 0.15s ease-out;
+.markdown-content th {
+  background-color: var(--bg-tertiary);
+  font-weight: 600;
 }
 
-/* 채팅 리스트 아이템 애니메이션 */
-@keyframes chatItemSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.markdown-content tr:nth-child(even) {
+  background-color: var(--bg-tertiary);
 }
 
-.chat-item {
-  animation: chatItemSlideIn 0.2s ease-out;
+.markdown-content tr:hover {
+  background-color: var(--bg-hover);
 }
 
-/* 삭제 확인 효과 */
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-2px); }
-  75% { transform: translateX(2px); }
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid var(--border-primary);
+  margin: 16px 0;
 }
 
-.chat-item-deleting {
-  animation: shake 0.3s ease-in-out;
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 8px 0;
 }
 
-/* 타이핑 인디케이터의 각 점에 대한 지연 시간 */
-.typing-dot:nth-child(1) { animation-delay: 0s; }
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-/* 메시지 버블 애니메이션 */
-.message-bubble {
-  animation: fadeIn 0.3s ease-out;
+/* 코드 하이라이팅 스타일 */
+.hljs {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
 }
 
-/* 로딩 메시지 애니메이션 */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+.hljs-keyword {
+  color: #d73a49 !important;
 }
 
-/* 호버 효과 */
-@keyframes buttonHover {
-  0% {
-    transform: scale(1);
-  }
-  100% {
-    transform: scale(1.05);
-  }
+.hljs-string {
+  color: #032f62 !important;
 }
 
-/* 모달 스타일 보강 */
-.modal-close-button:hover {
-  background-color: var(--bg-tertiary) !important;
+.hljs-comment {
+  color: #6a737d !important;
+  font-style: italic;
 }
 
-.theme-option:hover {
-  background-color: var(--bg-hover) !important;
+.hljs-number {
+  color: #005cc5 !important;
 }
 
-.theme-option.active:hover {
-  background-color: var(--bg-active) !important;
+.hljs-function {
+  color: #6f42c1 !important;
 }
 
-.mcp-config-button:hover {
-  background-color: var(--bg-hover) !important;
-  border-color: var(--accent-primary) !important;
+.hljs-variable {
+  color: #e36209 !important;
+}
+
+/* 다크 테마에서의 코드 하이라이팅 */
+[data-theme="dark"] .hljs-keyword {
+  color: #ff7b72 !important;
+}
+
+[data-theme="dark"] .hljs-string {
+  color: #a5d6ff !important;
+}
+
+[data-theme="dark"] .hljs-comment {
+  color: #8b949e !important;
+}
+
+[data-theme="dark"] .hljs-number {
+  color: #79c0ff !important;
+}
+
+[data-theme="dark"] .hljs-function {
+  color: #d2a8ff !important;
+}
+
+[data-theme="dark"] .hljs-variable {
+  color: #ffa657 !important;
 }
 
 /* 스크롤바 스타일링 */
@@ -282,6 +282,25 @@ button:hover {
 }
 
 ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-primary);
+}
+
+/* textarea 스크롤바 스타일 */
+textarea::-webkit-scrollbar {
+  width: 4px;
+}
+
+textarea::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 2px;
+}
+
+textarea::-webkit-scrollbar-thumb {
+  background: var(--text-secondary);
+  border-radius: 2px;
+}
+
+textarea::-webkit-scrollbar-thumb:hover {
   background: var(--text-primary);
 }
 
@@ -319,42 +338,10 @@ code {
   body {
     font-size: 14px;
   }
-  
-  .sidebar {
-    width: 280px !important;
-  }
-
-  .model-selector {
-    flex-direction: column !important;
-    gap: 4px !important;
-  }
-
-  .context-menu {
-    min-width: 120px !important;
-  }
 }
 
 @media (max-width: 480px) {
   body {
     font-size: 13px;
-  }
-  
-  .sidebar {
-    width: 250px !important;
-  }
-  
-  .message-bubble {
-    max-width: 85% !important;
-  }
-
-  .chat-header-content {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 12px !important;
-  }
-
-  .context-menu {
-    min-width: 100px !important;
-    font-size: 13px !important;
   }
 }

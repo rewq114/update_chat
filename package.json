@@ -24,7 +24,11 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@modelcontextprotocol/sdk": "^1.17.1",
-    "electron-updater": "^6.3.9"
+    "@rewq114/h-chat-sdk": "^0.1.0",
+    "electron-updater": "^6.3.9",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
@@ -34,6 +38,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.21",
     "cross-env": "^10.0.0",
     "electron": "^37.2.3",
     "electron-builder": "^25.1.8",
@@ -42,9 +47,11 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
+    "postcss": "^8.5.6",
     "prettier": "^3.6.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "vite": "^7.0.5"
   }

@@ -1,12 +1,2 @@
-export interface Chat {
-  id: string;
-  name: string;
-  messages: Message[];
-}
-
-// --- 데이터 타입 정의 ---
-export interface Message {
-  idx: number;
-  text: string;
-  role: string;
-}
+// 채팅 관련 타입들을 API 타입에서 재사용
+export type { ChatMessage, ChatSession, ChatData, ChatSessionList, ChatOperation, ChatRenameRequest } from '../../../types/api'
