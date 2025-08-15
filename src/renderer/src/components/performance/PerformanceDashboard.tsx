@@ -64,19 +64,19 @@ export const PerformanceDashboard: React.FC = () => {
       setError(null)
 
       // 성능 리포트 로드
-      const reportResponse = await window.electronAPI.invoke('get-performance-report')
+      const reportResponse = await window.electron.ipcRenderer.invoke('get-performance-report')
       if (reportResponse.success) {
         setPerformanceReport(reportResponse.report)
       }
 
       // 시스템 헬스 로드
-      const healthResponse = await window.electronAPI.invoke('get-system-health')
+      const healthResponse = await window.electron.ipcRenderer.invoke('get-system-health')
       if (healthResponse.success) {
         setSystemHealth(healthResponse.health)
       }
 
       // 에러 통계 로드
-      const errorResponse = await window.electronAPI.invoke('get-error-stats')
+      const errorResponse = await window.electron.ipcRenderer.invoke('get-error-stats')
       if (errorResponse.success) {
         setErrorStats(errorResponse.errorStats)
       }
@@ -100,10 +100,10 @@ export const PerformanceDashboard: React.FC = () => {
     }
   }
 
-  const formatBytes = (bytes: number) => {
-    const mb = bytes / 1024 / 1024
-    return `${mb.toFixed(2)} MB`
-  }
+  // const formatBytes = (bytes: number) => {
+  //   const mb = bytes / 1024 / 1024
+  //   return `${mb.toFixed(2)} MB`
+  // }
 
   const formatUptime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600)
@@ -225,7 +225,7 @@ export const PerformanceDashboard: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">느린 작업 TOP 5</h2>
           <div className="space-y-2">
-            {performanceReport.topSlowOperations.map((op, index) => (
+            {performanceReport.topSlowOperations.map((op, _index) => (
               <div
                 key={op.operation}
                 className="flex justify-between items-center p-2 bg-gray-50 rounded"
@@ -243,7 +243,7 @@ export const PerformanceDashboard: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">실패 작업 TOP 5</h2>
           <div className="space-y-2">
-            {performanceReport.topFailedOperations.map((op, index) => (
+            {performanceReport.topFailedOperations.map((op, _index) => (
               <div
                 key={op.operation}
                 className="flex justify-between items-center p-2 bg-gray-50 rounded"

@@ -1,5 +1,5 @@
 // services/MCP/MCPWebSocketConnection.ts
-import * as WebSocket from 'ws'
+import WebSocket from 'ws'
 import { MCPConnection, MCPConnectionConfig, MCPMessage } from './MCPConnection'
 import { Logger } from '../../core/logging/Logger'
 
@@ -37,7 +37,7 @@ export class MCPWebSocketConnection extends MCPConnection {
       this.ws = new WebSocket(url)
 
       // 연결 이벤트 처리
-      this.ws.on('open', () => {
+      this.ws?.on('open', () => {
         this.isConnected = true
         this.reconnectAttempts = 0
         this.logger.info('MCP', 'WebSocket connection opened')
@@ -49,7 +49,7 @@ export class MCPWebSocketConnection extends MCPConnection {
       })
 
       // 메시지 수신 처리
-      this.ws.on('message', (data) => {
+      this.ws?.on('message', (data) => {
         try {
           const message = JSON.parse(data.toString()) as MCPMessage
           this.logMessage('receive', message)
@@ -62,18 +62,18 @@ export class MCPWebSocketConnection extends MCPConnection {
       })
 
       // 에러 처리
-      this.ws.on('error', (error) => {
+      this.ws?.on('error', (error) => {
         this.isConnected = false
         this.handleError(error, 'WebSocket error')
       })
 
       // 연결 종료 처리
-      this.ws.on('close', (code, reason) => {
+      this.ws?.on('close', (code, reason) => {
         this.isConnected = false
         this.logger.info('MCP', 'WebSocket connection closed', { code, reason: reason.toString() })
         
         // 대기 중인 메시지들 거부
-        for (const [id, { reject }] of Array.from(this.pendingMessages.entries())) {
+        for (const [_id, { reject }] of Array.from(this.pendingMessages.entries())) {
           reject(new Error(`Connection closed with code ${code}: ${reason}`))
         }
         this.pendingMessages.clear()

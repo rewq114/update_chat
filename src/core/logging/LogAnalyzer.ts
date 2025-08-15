@@ -353,7 +353,7 @@ export class LogAnalyzer {
 
     // 간단한 트렌드 분석 (실제로는 시간대별 분석이 필요)
     return Array.from(categoryCounts.entries())
-      .map(([category, count]) => ({
+      .map(([category, _count]) => ({
         category,
         trend: 'stable' as const,
         change: 0
@@ -409,7 +409,7 @@ export class LogAnalyzer {
    * 권장사항 생성
    */
   private generateRecommendations(
-    entries: LogEntry[], 
+    _entries: LogEntry[], 
     patterns: LogAnalysis['patterns'], 
     alerts: LogAnalysis['alerts']
   ): LogAnalysis['recommendations'] {

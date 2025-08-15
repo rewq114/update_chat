@@ -79,7 +79,7 @@ export class MCPHTTPConnection extends MCPConnection {
     }
   }
 
-  onMessage(callback: (message: MCPMessage) => void): void {
+  onMessage(_callback: (message: MCPMessage) => void): void {
     // HTTP는 stateless이므로 콜백을 저장만 하고 실제 처리는 send에서 수행
     // 이 메서드는 인터페이스 호환성을 위해 구현
   }

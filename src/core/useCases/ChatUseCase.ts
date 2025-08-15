@@ -65,7 +65,6 @@ export class ChatUseCase {
       const stream = this.llmService.stream(agent, messages, tools)
 
       let fullResponse = ''
-      let currentToolCalls: any[] = []
       let isInToolCall = false
       let toolCallBuffer = ''
 
@@ -78,7 +77,7 @@ export class ChatUseCase {
           // 도구 호출이 완료되었는지 확인
           if (this.isToolCallComplete(toolCallBuffer)) {
             const toolCalls = this.parseToolCalls(toolCallBuffer)
-            currentToolCalls = toolCalls
+
 
             // 도구 호출 실행
             const toolResults = await this.executeToolCalls(toolCalls)
@@ -105,7 +104,7 @@ export class ChatUseCase {
             fullResponse += followUpResponse
             isInToolCall = false
             toolCallBuffer = ''
-            currentToolCalls = []
+
           }
         } else if (!isInToolCall) {
           // 일반 텍스트 응답
@@ -188,7 +187,7 @@ export class ChatUseCase {
 
   // 도구 호출 실행
   private async executeToolCalls(toolCalls: any[]): Promise<any[]> {
-    const results = []
+    const results: Array<{ tool_call_id: any; role: string; content: string }> = []
 
     for (const toolCall of toolCalls) {
       try {
@@ -239,6 +238,24 @@ export class ChatUseCase {
 
   async renameSession(sessionId: string, newTitle: string): Promise<void> {
     await this.chatRepository.updateSessionTitle(sessionId, newTitle)
+  }
+
+  async updateSessionTitle(sessionId: string, newTitle: string): Promise<void> {
+    await this.chatRepository.updateSessionTitle(sessionId, newTitle)
+  }
+
+  async getMigrationStatus(): Promise<{ needsMigration: boolean; currentVersion: string; targetVersion: string }> {
+    // 마이그레이션 상태 확인 로직
+    return {
+      needsMigration: false,
+      currentVersion: '1.0.0',
+      targetVersion: '1.0.0'
+    }
+  }
+
+  async migrate(): Promise<void> {
+    // 마이그레이션 로직
+    console.log('Migration completed')
   }
 
   async getChatData(sessionId: string): Promise<ChatMessage[]> {

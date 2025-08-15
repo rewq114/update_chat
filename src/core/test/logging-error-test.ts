@@ -23,6 +23,34 @@ export class LoggingErrorTest {
 
   constructor() {
     this.testLogDir = path.join(__dirname, '../../test-logs');
+    // 속성들을 기본값으로 초기화
+    this.logger = new Logger({ 
+      level: LogLevel.DEBUG, 
+      enableConsole: true, 
+      enableFile: false,
+      logDir: this.testLogDir,
+      maxFileSize: 1,
+      maxFiles: 3
+    });
+    this.errorHandler = new ErrorHandler(this.logger);
+    this.performanceMonitor = new PerformanceMonitor(this.logger);
+    this.systemMonitor = new SystemMonitor({ 
+      logConfig: { 
+        level: LogLevel.DEBUG, 
+        enableConsole: true, 
+        enableFile: false,
+        logDir: this.testLogDir,
+        maxFileSize: 1,
+        maxFiles: 3
+      },
+      enablePerformanceMonitoring: true,
+      enableErrorHandling: true,
+      enableSystemMetrics: true,
+      cleanupInterval: 5000
+    });
+    this.logAnalyzer = new LogAnalyzer(this.testLogDir);
+    this.errorMiddleware = createErrorMiddleware(this.errorHandler, this.logger);
+    
     this.initializeComponents();
   }
 
@@ -184,7 +212,7 @@ export class LoggingErrorTest {
     console.log('⚡ 성능 모니터링 테스트...');
 
     // 성능 측정 테스트
-    const result = await this.performanceMonitor.measureAsync(
+    await this.performanceMonitor.measureAsync(
       'test-async-operation',
       async () => {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -194,7 +222,7 @@ export class LoggingErrorTest {
     );
 
     // 동기 성능 측정 테스트
-    const syncResult = this.performanceMonitor.measureSync(
+    this.performanceMonitor.measureSync(
       'test-sync-operation',
       () => {
         // 간단한 계산

@@ -1,6 +1,6 @@
 // core/test/mcp-integration-test.ts
 import { Logger, LogLevel } from '../logging/Logger'
-import { MCPClient, MCPClientConfig, MCPServerConfig } from '../../services/MCP/MCPClient'
+import { MCPClient, MCPClientConfig } from '../../services/MCP/MCPClient'
 import { MCPConnectionType } from '../../services/MCP/MCPConnection'
 import { spawn, ChildProcess } from 'child_process'
 import * as fs from 'fs'

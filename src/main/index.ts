@@ -286,7 +286,7 @@ ipcMain.handle('save-chat-data', async (_, chatData) => {
     await systemComponents.systemMonitor.measureAsync(
       'save_chat_data',
       async () => {
-        return await systemComponents!.chatUseCase.saveChatData(chatData)
+        return await systemComponents!.chatUseCase.saveChatData(chatData.sessionId, chatData.messages || [])
       },
       {
         sessionId: chatData.sessionId,

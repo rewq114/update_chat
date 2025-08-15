@@ -25,7 +25,7 @@ export default function Sidebar({
   return (
     <div className="w-80 bg-bg-secondary border-r border-border-primary flex flex-col">
       <div className="p-4 border-b border-border-primary">
-        <CreateChatButton onClick={onCreateChat} />
+        <CreateChatButton onCreateNewChat={onCreateChat} />
       </div>
       
       <div className="flex-1 overflow-hidden">
@@ -49,7 +49,8 @@ export default function Sidebar({
 
       {isSettingsOpen && (
         <SettingsModal
-          isOpen={isSettingsOpen}
+          theme="dark"
+          onThemeChange={(theme) => console.log('Theme changed:', theme)}
           onClose={() => setIsSettingsOpen(false)}
         />
       )}

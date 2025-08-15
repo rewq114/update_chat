@@ -95,7 +95,7 @@ export class PerformanceTest {
         throw new Error('Intentional error for testing')
       })
     } catch (error) {
-      console.log('Expected error caught:', error.message)
+      console.log('Expected error caught:', error instanceof Error ? error.message : String(error))
     }
   }
 
@@ -193,7 +193,7 @@ export class PerformanceTest {
   private async testConcurrentOperations(): Promise<void> {
     console.log('🔄 Testing concurrent operations...')
 
-    const promises = []
+    const promises: Promise<string>[] = []
     for (let i = 0; i < 10; i++) {
       promises.push(
         this.performanceMonitor.measureAsync(`concurrent_operation_${i}`, async () => {

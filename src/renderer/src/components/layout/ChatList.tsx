@@ -44,12 +44,16 @@ export default function ChatList({
     setContextMenu(prev => ({ ...prev, visible: false }));
   };
 
-  const handleRename = (newTitle: string) => {
-    onRenameChat(contextMenu.sessionId, newTitle);
+  const handleRename = async () => {
+    // TODO: 실제로는 사용자로부터 새 제목을 입력받아야 함
+    const newTitle = prompt('새 제목을 입력하세요:') || '';
+    if (newTitle.trim()) {
+      onRenameChat(contextMenu.sessionId, newTitle);
+    }
     handleContextMenuClose();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     onDeleteChat(contextMenu.sessionId);
     handleContextMenuClose();
   };
@@ -99,7 +103,6 @@ export default function ChatList({
           y={contextMenu.y}
           onRename={handleRename}
           onDelete={handleDelete}
-          onClose={handleContextMenuClose}
         />
       )}
     </div>

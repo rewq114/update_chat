@@ -1,6 +1,6 @@
 // core/test/mcp-client-test.ts
 import { Logger, LogLevel } from '../logging/Logger'
-import { MCPClient, MCPClientConfig, MCPServerConfig } from '../../services/MCP/MCPClient'
+import { MCPClient, MCPClientConfig } from '../../services/MCP/MCPClient'
 import { MCPConnectionType } from '../../services/MCP/MCPConnection'
 import { MCPToolConverter, MCPTool } from '../../services/MCP/MCPToolConverter'
 import { MCPHealthChecker, MCPHealthCheckConfig } from '../../services/MCP/MCPHealthChecker'

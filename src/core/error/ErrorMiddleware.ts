@@ -19,7 +19,7 @@ export class ErrorMiddleware {
   private logger: Logger
   private config: ErrorMiddlewareConfig
 
-  constructor(errorHandler: ErrorHandler, logger: Logger, config: ErrorMiddlewareConfig) {
+  constructor(errorHandler: ErrorHandler, logger: Logger, config: Partial<ErrorMiddlewareConfig> = {}) {
     this.errorHandler = errorHandler
     this.logger = logger
     this.config = {
@@ -54,11 +54,7 @@ export class ErrorMiddleware {
           await this.errorHandler.handleError(
             lastError,
             category,
-            {
-              ...context,
-              attempt,
-              maxAttempts: this.config.maxRetryAttempts
-            },
+            context,
             severity
           )
 
@@ -131,10 +127,9 @@ export class ErrorMiddleware {
    * 예상치 못한 에러 처리
    */
   private handleUncaughtError(error: Error, type: string): void {
-    this.logger.fatal('ERROR_MIDDLEWARE', `Uncaught ${type}`, {
-      errorType: type,
-      errorMessage: error.message,
-      stack: error.stack
+    this.logger.fatal('ERROR_MIDDLEWARE', `Uncaught ${type}`, error, {
+      // errorType: type, // Error 객체에 직접 속성 추가는 피함
+      type
     })
 
     // 에러 핸들러에 전달
@@ -249,7 +244,15 @@ export const createErrorMiddleware = (
   logger: Logger,
   config: Partial<ErrorMiddlewareConfig> = {}
 ): ErrorMiddleware => {
-  return new ErrorMiddleware(errorHandler, logger, config)
+  const defaultConfig: ErrorMiddlewareConfig = {
+    enableGlobalErrorHandling: true,
+    enableRecovery: true,
+    enableErrorReporting: true,
+    maxRetryAttempts: 3,
+    retryDelayMs: 1000,
+    ...config
+  }
+  return new ErrorMiddleware(errorHandler, logger, defaultConfig)
 }
 
 /**
@@ -262,7 +265,14 @@ export const withErrorHandling = <T>(
   severity: ErrorSeverity = ErrorSeverity.MEDIUM
 ) => {
   return (errorHandler: ErrorHandler, logger: Logger) => {
-    const middleware = new ErrorMiddleware(errorHandler, logger)
+    const defaultConfig: ErrorMiddlewareConfig = {
+      enableGlobalErrorHandling: true,
+      enableRecovery: true,
+      enableErrorReporting: true,
+      maxRetryAttempts: 3,
+      retryDelayMs: 1000
+    }
+    const middleware = new ErrorMiddleware(errorHandler, logger, defaultConfig)
     return middleware.wrapAsync(
       asyncFn,
       { operation: context, component: 'unknown' },
@@ -282,7 +292,14 @@ export const withSyncErrorHandling = <T>(
   severity: ErrorSeverity = ErrorSeverity.MEDIUM
 ) => {
   return (errorHandler: ErrorHandler, logger: Logger) => {
-    const middleware = new ErrorMiddleware(errorHandler, logger)
+    const defaultConfig: ErrorMiddlewareConfig = {
+      enableGlobalErrorHandling: true,
+      enableRecovery: true,
+      enableErrorReporting: true,
+      maxRetryAttempts: 3,
+      retryDelayMs: 1000
+    }
+    const middleware = new ErrorMiddleware(errorHandler, logger, defaultConfig)
     return middleware.wrapSync(
       syncFn,
       { operation: context, component: 'unknown' },

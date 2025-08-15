@@ -5,7 +5,7 @@ import { MCPSTDIOConnection } from './MCPSTDIOConnection'
 import { MCPWebSocketConnection } from './MCPWebSocketConnection'
 import { MCPHTTPConnection } from './MCPHTTPConnection'
 import { MCPHealthChecker, MCPHealthCheckConfig } from './MCPHealthChecker'
-import { MCPToolConverter, MCPTool, MCPToolCall } from './MCPToolConverter'
+import { MCPToolConverter, MCPTool } from './MCPToolConverter'
 
 export interface MCPServerConfig {
   name: string
